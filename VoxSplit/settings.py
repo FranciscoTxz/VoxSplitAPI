@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 URL_WHISPER_MODEL = os.getenv("URL_WHISPER_MODEL")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/

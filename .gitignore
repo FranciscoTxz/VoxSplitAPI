@@ -2,3 +2,4 @@
 /audio
 *.sqlite3
 VoxSplit/.env
+/pyannote_model

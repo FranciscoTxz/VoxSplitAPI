@@ -6,3 +6,11 @@ class AudioFile(models.Model):
 
     def __str__(self):
         return self.file.name
+    
+    
+class AudioInfo(models.Model):
+    transcription = models.JSONField(blank=True, null=True)
+    diarization = models.JSONField(blank=True, null=True)
+
+    def __str__(self):
+        return self.transcription, self.diarization
