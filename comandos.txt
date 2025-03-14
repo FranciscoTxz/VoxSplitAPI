@@ -1,0 +1,9 @@
+// START ENV
+source voxsplitenv/bin/activate    
+
+//RUN DJANGO
+python manage.py runserver 
+
+//CREATE MIGRATION AND MIGRATION
+python manage.py makemigrations                                                 
+python manage.py migrate

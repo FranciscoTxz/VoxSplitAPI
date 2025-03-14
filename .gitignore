@@ -1,0 +1,4 @@
+/whisper_model
+/audio
+*.sqlite3
+VoxSplit/.env
