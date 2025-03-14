@@ -52,8 +52,9 @@ class TranscribeAudioView(APIView):
                 "transcription": resultWhisper,
                 "diarization": formatted_data
             }
-            
+
             AudioInfo.objects.create(
+                file_name=audio_instance.file.name,  # Guarda el nombre del archivo
                 transcription=resultWhisper["text"],  # Guarda la transcripción
                 diarization=formatted_data  # Guarda toda la estructura JSON
             )
