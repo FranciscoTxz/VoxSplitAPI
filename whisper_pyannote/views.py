@@ -26,9 +26,15 @@ class TranscribeAudioView(APIView):
                 options["beam_size"] = int(num_speakers)  # Ajustar el beam search
 
 
-            model = whisper.load_model("small", download_root = f"{URL_WHISPER_MODEL}")  # Cargar el modelo de Whisper
+            model = whisper.load_model("turbo", download_root = f"{URL_WHISPER_MODEL}")  # Cargar el modelo de Whisper
             result = model.transcribe(audio_instance.file.path, word_timestamps=True,  **options)  # Transcribir audio
+
             
-            return Response({"transcription": result["text"]}, status=status.HTTP_200_OK)
+            response = {
+                "transcription": result["text"],
+                "word_timestamps": result
+            }
+            
+            return Response(response, status=status.HTTP_200_OK)
 
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
