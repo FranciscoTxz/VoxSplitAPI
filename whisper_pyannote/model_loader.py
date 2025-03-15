@@ -2,6 +2,7 @@
 import whisper
 from VoxSplit.settings import URL_WHISPER_MODEL, HF_TOKEN
 from pyannote.audio import Pipeline
+from asgiref.sync import sync_to_async
 
 # Cargar el modelo de Whisper al iniciar la aplicación
 whisper_model = whisper.load_model("base", download_root = f"{URL_WHISPER_MODEL}")
