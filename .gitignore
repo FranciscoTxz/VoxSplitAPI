@@ -3,3 +3,4 @@
 *.sqlite3
 VoxSplit/.env
 /pyannote_model
+/pyannote_model_segmentation

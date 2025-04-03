@@ -12,6 +12,8 @@ class AudioInfo(models.Model):
     file_name = models.TextField(blank=True, null=True)
     transcription = models.JSONField(blank=True, null=True)
     diarization = models.JSONField(blank=True, null=True)
+    overlapp = models.JSONField(blank=True, null=True, default=list)
+    result = models.JSONField(blank=True, null=True)
 
     def __str__(self):
         return self.transcription, self.diarization
