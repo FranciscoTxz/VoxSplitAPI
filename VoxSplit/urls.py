@@ -20,5 +20,5 @@ from whisper_pyannote.views import TranscribeAudioView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("transcribe/", TranscribeAudioView.as_view(), name="transcribe-audio"),
+    path("process/", TranscribeAudioView.as_view(), name="transcribe-audio"),
 ]
