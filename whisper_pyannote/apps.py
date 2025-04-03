@@ -6,5 +6,5 @@ class WhisperPyannoteConfig(AppConfig):
     name = "whisper_pyannote"
 
     def ready(self):
-            # Aquí se asegura que el modelo se cargue cuando la aplicación arranque
+            # This ensures that the model is loaded when the application starts.
             import whisper_pyannote.model_loader

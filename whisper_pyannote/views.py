@@ -6,77 +6,79 @@ from pyannote.audio.pipelines import OverlappedSpeechDetection
 from rest_framework.parsers import MultiPartParser, FormParser
 from drfasyncview import AsyncRequest, AsyncAPIView
 from asgiref.sync import sync_to_async
-
-# Ubuntu 24
 from whisper_pyannote.model_loader import get_model_segmentation, get_model_whisper, get_model_pyannote
 from .models import AudioInfo
 from .serializers import AudioFileSerializer
 
 logger = logging.getLogger(__name__)
 
-class TranscribeAudioView(AsyncAPIView):  # 🔹 Ahora es una vista asíncrona
+class TranscribeAudioView(AsyncAPIView): 
     parser_classes = (MultiPartParser, FormParser)
 
-    async def post(self, request: AsyncRequest, *args, **kwargs):  # 🔹 Método asincrónico
+    async def post(self, request: AsyncRequest, *args, **kwargs):
         file_serializer = AudioFileSerializer(data=request.data)
 
         if file_serializer.is_valid():
-            audio_instance = await self.save_file(file_serializer)  # 🔹 Guardar archivo de forma asíncrona
+            audio_instance = await self.save_file(file_serializer) # Save the file in the database
 
+            # Save headers
             language = request.headers.get("language", "en")  
             speakers = request.headers.get("speakers", 2)
 
+            # Transcribe the audio
             try:
                 transcription_result = await self.transcribe_audio(audio_instance.file.path, language, speakers)
             except Exception as e:
-                logger.error(f"Error en transcripción: {e}")
+                logger.error(f"Transcribe Error: {e}")
                 return JsonResponse(
-                            data={"error": f"Error en la transcripción del audio. {e}"},
+                            data={"error": f"Transcribe Error: {e}"},
                             status=500,
                         )
 
+            # Diarize the audio
             try:
                 diarization_result = await self.diarize_audio(audio_instance.file.path, speakers)
             except Exception as e:
-                logger.error(f"Error en diarización: {e}")
+                logger.error(f"Diarization Error: {e}")
                 return JsonResponse(
-                            data={"error": f"Error en la diarización del audio. {e}"},
+                            data={"error": f"Diarization Error: {e}"},
                             status=500,
                         )
             
+            # See Overlapped Speech Detection
             try:
-                osd_dict = await self.segmentation_audio(audio_instance.file.path)
+                osd_dict = await self.overley_audio(audio_instance.file.path)
             except Exception as e:
-                logger.error(f"Error en segmentacion: {e}")
+                logger.error(f"Overlay Error: {e}")
                 return JsonResponse(
-                            data={"error": f"Error en la segmentacion del audio. {e}"},
+                            data={"error": f"Overlay Error {e}"},
                             status=500,
                         )
             
-            ### JUNTAR LOS RESULTADOS
+            # Put together the results
             response = await self.mix_all(transcription_result, diarization_result, osd_dict)
 
-            # 🔹 Guardar en la base de datos
+            # Save the results in the database
             await self.save_audio_info(audio_instance.file.name, transcription_result["text"], diarization_result, osd_dict, response)
 
-            response = {}
+            # Send Response
             return JsonResponse(
                             data=response,
                             status=201,
                            )
-
+        # Error
         return JsonResponse(
-                            data={"error": "Error en una parte del proceso"},
+                            data={"error": "Invalid file"},
                             status=400,
                            )              
     @sync_to_async
     def save_file(self, file_serializer):
-        """Guarda el archivo en la base de datos de forma asíncrona"""
+        """Saves the file to the database asynchronously"""
         return file_serializer.save()
     
     async def mix_all(self, transcription_result, diarization_result, osd_dict):
-        """Mezcla los resultados de transcripción y diarización"""
-        # CLEAN DATA
+        """Mix the results of transcription and diarization"""
+        # Clean the transcription result
         for segment in transcription_result["segments"]:
             del segment["seek"]
             del segment["tokens"]
@@ -98,16 +100,16 @@ class TranscribeAudioView(AsyncAPIView):  # 🔹 Ahora es una vista asíncrona
             for word in segment["words"]:
                 word["speaker"] = "Unknown"
                 for diarize in diarization_result:
-                    if "start" in word and word["start"] >= float(diarize["inicio"]) and "end" in word and word["end"] <= float(diarize["fin"]):
-                        word["speaker"] = diarize["hablante"]
+                    if "start" in word and word["start"] >= float(diarize["start"]) and "end" in word and word["end"] <= float(diarize["end"]):
+                        word["speaker"] = diarize["speaker"]
                         break
                 if word["speaker"] == "Unknown" and "start" in word:
                     promedio = (word["start"] + word["end"]) / 2
                     for diarize in diarization_result:
-                        if promedio >= float(diarize["inicio"]):
-                            word["speaker"] = diarize["hablante"]
+                        if promedio >= float(diarize["start"]):
+                            word["speaker"] = diarize["speaker"]
 
-        # Overlapped
+        # Voice overlay detection
         for segment in transcription_result["segments"]:
             for word in segment["words"]:
                 for overlapp in osd_dict:
@@ -135,7 +137,7 @@ class TranscribeAudioView(AsyncAPIView):  # 🔹 Ahora es una vista asíncrona
         return transcription_result
 
     async def transcribe_audio(self, file_path, language, num_speakers):
-        """Ejecuta la transcripción del audio de forma asíncrona"""
+        """Runs audio transcription asynchronously"""
         options = {"language": language}
         if num_speakers:
             try:
@@ -143,26 +145,26 @@ class TranscribeAudioView(AsyncAPIView):  # 🔹 Ahora es una vista asíncrona
             except ValueError:
                 raise ValueError("number_speakers debe ser un número válido.")
 
-        model = get_model_whisper()  # 🔹 Se llama de forma asíncrona
+        model = get_model_whisper()
         res =  model.transcribe(file_path, word_timestamps=True, **options)
         return res
 
     async def diarize_audio(self, file_path, num_speakers):
-        """Ejecuta la diarización del audio de forma asíncrona"""
-        pyannote_model = get_model_pyannote()  # 🔹 Se llama de forma asíncrona
+        """Runs audio diarization asynchronously"""
+        pyannote_model = get_model_pyannote() 
         result = pyannote_model(file_path, num_speakers=int(num_speakers))
 
         return [
             {
-                "inicio": f"{turn.start:.4f}",
-                "fin": f"{turn.end:.4f}",
-                "hablante": speaker
+                "start": f"{turn.start:.4f}",
+                "end": f"{turn.end:.4f}",
+                "speaker": speaker
             }
             for turn, _, speaker in result.itertracks(yield_label=True)
         ]
 
-    async def segmentation_audio(self, file_path):
-        """Ejecuta la segmentación del audio de forma asíncrona"""
+    async def overley_audio(self, file_path):
+        """Runs audio voices overlay detection asynchronously"""
         segmentation_model = get_model_segmentation()
         pipelineO = OverlappedSpeechDetection(segmentation=segmentation_model)
         HYPER_PARAMETERS = {
@@ -183,8 +185,8 @@ class TranscribeAudioView(AsyncAPIView):  # 🔹 Ahora es una vista asíncrona
         return osd_dict
 
     async def save_audio_info(self, file_name, transcription, diarization, overlappR, resultX):
-        """Guarda la transcripción y la diarización en la base de datos"""
-        await AudioInfo.objects.acreate(  # 🔹 `acreate()` es la versión asincrónica de `create()`
+        """Save the transcription and diarization to the database."""
+        await AudioInfo.objects.acreate(  # 🔹
             file_name=file_name,
             transcription=transcription,
             diarization=diarization,
