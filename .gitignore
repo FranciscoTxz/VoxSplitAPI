@@ -4,3 +4,6 @@
 VoxSplit/.env
 /pyannote_model
 /pyannote_model_segmentation
+/VoxSplit/__pycache__
+/VoxSplit/__pycache__
+/whisper_pyannote/__pycache__
