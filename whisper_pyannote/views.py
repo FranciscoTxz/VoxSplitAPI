@@ -192,7 +192,7 @@ class TranscribeAudioView(AsyncAPIView):
 
     async def save_audio_info(self, file_name, transcription, diarization, overlappR, resultX):
         """Save the transcription and diarization to the database."""
-        await AudioInfo.objects.acreate(  # 🔹
+        await AudioInfo.objects.acreate(
             file_name=file_name, 
             transcription=transcription,
             diarization=diarization,
