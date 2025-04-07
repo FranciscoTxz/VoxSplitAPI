@@ -84,6 +84,10 @@ class TranscribeAudioView(AsyncAPIView):
     
     async def mix_all(self, transcription_result, diarization_result, osd_dict):
         """Mix the results of transcription and diarization"""
+
+        # Update the start time of the first segment
+        diarization_result[0]["start"] = transcription_result["segments"][0]["start"]
+
         # Clean the transcription result
         for segment in transcription_result["segments"]:
             del segment["seek"]
